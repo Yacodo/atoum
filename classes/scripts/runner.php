@@ -104,7 +104,7 @@ class runner extends atoum\script
 					$previousRunFailed = $currentRunFailed;
 					$methods = $this->methods;
 				}
-				else if ($this->loop === false || $this->runAgain() === false)
+				else if ($this->loop === false || $this->runAgain($currentRunFailed) === false)
 				{
 					$this->runTests = false;
 				}
@@ -216,9 +216,9 @@ class runner extends atoum\script
 		return $this->runDirectory(atoum\directory . '/tests/units/classes');
 	}
 
-	public function enableLoop()
+	public function enableLoop($loop = true)
 	{
-		$this->loop = true;
+		$this->loop = $loop;
 
 		return $this;
 	}
@@ -503,12 +503,7 @@ class runner extends atoum\script
 
 		$this->addArgumentHandler(
 			function($script, $argument, $values) {
-				if (sizeof($values) > 0)
-				{
-					throw new exceptions\logic\invalidArgument(sprintf($script->getLocale()->_('Bad usage of %s, do php %s --help for more informations'), $argument, $script->getName()));
-				}
-
-				$script->enableLoop();
+				$script->enableLoop((sizeof($values) > 0) ? (int) $values[0] : true);
 			},
 			array('-l', '--loop'),
 			null,
@@ -533,11 +528,23 @@ class runner extends atoum\script
 		return $this;
 	}
 
-	protected function runAgain()
+	protected function runAgain($currentRunFailed)
 	{
-		$this->prompt($this->locale->_('Press <Enter> to reexecute, press any other key to stop...'));
+		$restart = false;
 
-		return (trim(fgets(STDIN)) === '');
+		if($currentRunFailed === false OR $this->loop === true)
+		{
+			$this->prompt($this->locale->_('Press <Enter> to reexecute, press any other key to stop...'));
+
+			$restart = (trim(fgets(STDIN)) === '');
+		}
+		elseif(is_int($this->loop))
+		{
+			sleep($this->loop);
+			$restart = true;
+		}
+
+		return $restart;
 	}
 }
 
